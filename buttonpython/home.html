@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FinTech News Aggregator</title>
+  <!-- Add Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Add Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #2563eb;
+      --secondary-color: #1e40af;
+      --background-color: #f8fafc;
+      --card-background: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--background-color);
+      margin: 0;
+      padding: 20px;
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 20px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .section {
+      background: var(--card-background);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-color);
+    }
+
+    .section h2, .section h3 {
+      color: var(--primary-color);
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: var(--secondary-color);
+    }
+
+    .article {
+      background: var(--card-background);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .article:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .article h2 {
+      margin: 0 0 10px 0;
+      font-size: 1.2rem;
+      color: var(--text-primary);
+    }
+
+    .article .meta {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+
+    .article a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .article a:hover {
+      text-decoration: underline;
+    }
+
+    .error-message {
+      color: #dc2626;
+      background-color: #fee2e2;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+
+    /* Stats for Twitter */
+    .stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-chart-line"></i> Finance News Aggregator</h1>
+      <p>Your one-stop source for financial and tech news</p>
+    </div>
+    <div class="section">
+      <h2><i class="fas fa-newspaper"></i> Search Topic</h2>
+      <form action="{% url 'searched' %}" method="post" class="search-form">
+        <input type="text" id="subreddit" name="subreddit" placeholder="Search Reddit (e.g., stocks, AAPL, Tesla)" />
+        <button type="submit"><i class="fas fa-search"></i> Search</button>
+      </form>
+      
+      {% if reddit_error %}
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> {{ reddit_error }}
+        </div>
+      {% endif %}
+      
+      {% if google_error %}
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> {{ google_error }}
+        </div>
+      {% endif %}
+      {% if twitter_error %}
+        <div class="error-message">
+        <i class="fas fa-exclamation-circle"></i> {{ twitter_error }}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if search_query and search_query|length > 0 %}
+      <h4>Search results for "{{search_query}}"</h4>
+      {% for article in reddit %}
+        <div class="article">
+          <h2>{{ article.title }}</h2>
+          <div class="meta">
+            <i class="far fa-clock"></i> {{ article.date }}
+            <i class="fab fa-reddit"></i> r/{{ article.subreddit }}
+            <i class="fas fa-arrow-up"></i> {{ article.score }}
+          </div>
+          <a href="{{ article.url }}" target="_blank">Read More <i class="fas fa-external-link-alt"></i></a>
+        </div>
+      {% endfor %}
+      {% if google and google|length > 0 %}
+      {% for article in google %}
+        <div class="article">
+          <h2>{{ article.title }}</h2>
+          <div class="meta">
+            <i class="far fa-calendar"></i> {{ article.date }}
+          </div>
+          <a href="{{ article.url }}" target="_blank">Read More <i class="fas fa-external-link-alt"></i></a>
+        </div>
+      {% endfor %}
+      {% if twitter and twitter|length > 0 %}
+        {% for article in twitter %}
+          <div class="article">
+            <h2>{{ article.text }}</h2>
+            <div class="meta">
+            <i class="far fa-user"></i> {{ article.creator }}
+            <i class="far fa-clock"></i> {{ article.date }} minutes ago
+          </div>
+            <div class="stats">
+              <div class="stat-item">
+              <i class="far fa-heart"></i> {{ article.likes }}
+              </div>
+            </div>
+          <a href="{{ article.url }}" target="_blank">View Tweet <i class="fas fa-external-link-alt"></i></a>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endif %}
+    {% endif %}
+    
+  </div>
+
+
+
+
+
+    <!-- Twitter Section
+    <div class="section">
+      <h2><i class="fab fa-twitter"></i> Twitter Feed</h2>
+      <form action="{% url 'twitter' %}" method="post" class="search-form">
+        <input type="text" id="tweets" name="tweets" placeholder="Enter topic (e.g., stocks, crypto, fintech)">
+        <button type="submit"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </form>
+      {% if twitter and twitter|length > 0 %}
+        {% for article in twitter %}
+          <div class="article">
+            <h2>{{ article.text }}</h2>
+            <div class="meta">
+              <i class="far fa-user"></i> {{ article.creator }}
+              <i class="far fa-clock"></i> {{ article.date }} minutes ago
+            </div>
+            <div class="stats">
+              <div class="stat-item">
+                <i class="far fa-heart"></i> {{ article.likes }}
+              </div>
+            </div>
+            <a href="{{ article.url }}" target="_blank">View Tweet <i class="fas fa-external-link-alt"></i></a>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div> -->
+      <!-- {% if google and google|length > 0 %}
+      {% for article in google %}
+        <div class="article">
+          <h2>{{ article.title }}</h2>
+          <div class="meta">
+            <i class="far fa-calendar"></i> {{ article.date }}
+          </div>
+          <a href="{{ article.url }}" target="_blank">Read More <i class="fas fa-external-link-alt"></i></a>
+        </div>
+      {% endfor %}
+    {% endif %} -->
+    <!-- </div> -->
+
+    <!-- Google Section -->
+    <!-- <div class="section">
+      <h2><i class="fab fa-google"></i> Google News</h2>
+      <form action="{% url 'google' %}" method="post" class="search-form">
+        {% csrf_token %}
+        <input type="text" id="google_query" name="google_query" placeholder="Enter search topic (e.g., market news, tech stocks)">
+        <button type="submit"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </form>
+       {% if google_error %}
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> {{ google_error }}
+        </div>
+      {% endif %} -->
+      <!-- {% if google and google|length > 0 %}
+        {% for article in google %}
+          <div class="article">
+            <h2>{{ article.title }}</h2>
+            <div class="meta">
+              <i class="far fa-calendar"></i> {{ article.date }}
+            </div>
+            <a href="{{ article.url }}" target="_blank">Read More <i class="fas fa-external-link-alt"></i></a>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div> -->
+
+    <!-- Reddit Section -->
+    <!-- <div class="section">
+      <h2><i class="fab fa-reddit"></i> Reddit Feed</h2>
+      <form action="{% url 'searched' %}" method="post" class="search-form">
+        <input type="text" id="subreddit" name="subreddit" placeholder="Search Reddit (e.g., stocks, investing, crypto)">
+        <button type="submit"><i class="fas fa-search"></i> Search</button>
+      </form> -->
+      <!-- {% if reddit_error %}
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> {{ reddit_error }}
+        </div>
+      {% endif %}
+      {% if search_query and search_query|length > 0 %}
+        <h4>Search results for "{{search_query}}"</h4>
+        {% for article in reddit %}
+          <div class="article">
+            <h2>{{ article.title }}</h2>
+            <div class="meta">
+              <i class="far fa-clock"></i> {{ article.date }}
+              <i class="fab fa-reddit"></i> r/{{ article.subreddit }}
+              <i class="fas fa-arrow-up"></i> {{ article.score }}
+            </div>
+            <a href="{{ article.url }}" target="_blank">Read More <i class="fas fa-external-link-alt"></i></a>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div> -->
+
+
+
+
+
+    <!-- Twitter Section
+    <div class="section">
+      <h2><i class="fab fa-twitter"></i> Twitter Feed</h2>
+      <form action="{% url 'twitter' %}" method="post" class="search-form">
+        <input type="text" id="tweets" name="tweets" placeholder="Enter topic (e.g., stocks, crypto, fintech)">
+        <button type="submit"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </form>
+      {% if twitter and twitter|length > 0 %}
+        {% for article in twitter %}
+          <div class="article">
+            <h2>{{ article.text }}</h2>
+            <div class="meta">
+              <i class="far fa-user"></i> {{ article.creator }}
+              <i class="far fa-clock"></i> {{ article.date }} minutes ago
+            </div>
+            <div class="stats">
+              <div class="stat-item">
+                <i class="far fa-heart"></i> {{ article.likes }}
+              </div>
+            </div>
+            <a href="{{ article.url }}" target="_blank">View Tweet <i class="fas fa-external-link-alt"></i></a>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div> -->
+      <!-- {% if google and google|length > 0 %}
+      {% for article in google %}
+        <div class="article">
+          <h2>{{ article.title }}</h2>
+          <div class="meta">
+            <i class="far fa-calendar"></i> {{ article.date }}
+          </div>
+          <a href="{{ article.url }}" target="_blank">Read More <i class="fas fa-external-link-alt"></i></a>
+        </div>
+      {% endfor %}
+    {% endif %} -->
+    <!-- </div> -->
+
+    <!-- Google Section -->
+    <!-- <div class="section">
+      <h2><i class="fab fa-google"></i> Google News</h2>
+      <form action="{% url 'google' %}" method="post" class="search-form">
+        {% csrf_token %}
+        <input type="text" id="google_query" name="google_query" placeholder="Enter search topic (e.g., market news, tech stocks)">
+        <button type="submit"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </form>
+       {% if google_error %}
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> {{ google_error }}
+        </div>
+      {% endif %} -->
+      <!-- {% if google and google|length > 0 %}
+        {% for article in google %}
+          <div class="article">
+            <h2>{{ article.title }}</h2>
+            <div class="meta">
+              <i class="far fa-calendar"></i> {{ article.date }}
+            </div>
+            <a href="{{ article.url }}" target="_blank">Read More <i class="fas fa-external-link-alt"></i></a>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div> -->
+
+    <!-- Reddit Section -->
+    <!-- <div class="section">
+      <h2><i class="fab fa-reddit"></i> Reddit Feed</h2>
+      <form action="{% url 'searched' %}" method="post" class="search-form">
+        <input type="text" id="subreddit" name="subreddit" placeholder="Search Reddit (e.g., stocks, investing, crypto)">
+        <button type="submit"><i class="fas fa-search"></i> Search</button>
+      </form> -->
+      <!-- {% if reddit_error %}
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> {{ reddit_error }}
+        </div>
+      {% endif %}
+      {% if search_query and search_query|length > 0 %}
+        <h4>Search results for "{{search_query}}"</h4>
+        {% for article in reddit %}
+          <div class="article">
+            <h2>{{ article.title }}</h2>
+            <div class="meta">
+              <i class="far fa-clock"></i> {{ article.date }}
+              <i class="fab fa-reddit"></i> r/{{ article.subreddit }}
+              <i class="fas fa-arrow-up"></i> {{ article.score }}
+            </div>
+            <a href="{{ article.url }}" target="_blank">Read More <i class="fas fa-external-link-alt"></i></a>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div> -->
+
+
+
+
+
+    <!-- Twitter Section
+    <div class="section">
+      <h2><i class="fab fa-twitter"></i> Twitter Feed</h2>
+      <form action="{% url 'twitter' %}" method="post" class="search-form">
+        <input type="text" id="tweets" name="tweets" placeholder="Enter topic (e.g., stocks, crypto, fintech)">
+        <button type="submit"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </form>
+      {% if twitter and twitter|length > 0 %}
+        {% for article in twitter %}
+          <div class="article">
+            <h2>{{ article.text }}</h2>
+            <div class="meta">
+              <i class="far fa-user"></i> {{ article.creator }}
+              <i class="far fa-clock"></i> {{ article.date }} minutes ago
+            </div>
+            <div class="stats">
+              <div class="stat-item">
+                <i class="far fa-heart"></i> {{ article.likes }}
+              </div>
+            </div>
+            <a href="{{ article.url }}" target="_blank">View Tweet <i class="fas fa-external-link-alt"></i></a>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div> -->
+
+
